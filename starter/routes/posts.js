@@ -9,50 +9,87 @@ function isValidObjectId(id) {
   return mongoose.Types.ObjectId.isValid(id);
 }
 
-router.post('/', async (req, res) => {
-  // TODO: Create a new Post instance from req.body.
-  // TODO: Save it to MongoDB.
-  // TODO: Return the created post with status code 201.
-  return res.status(501).json({ message: 'TODO: implement POST /api/posts' });
+// CREATE a new post
+router.post('/', async (req, res, next) => {
+  try {
+    const { title, content, author } = req.body || {};
+    const post = new Post({ title, content, author });
+    await post.save();
+    return res.status(201).json(post);
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ error: error.message });
+    } 
+    next(error);
+  }
+});
+// READ all posts
+router.get('/', async (req, res, next) => {
+  try {
+    const posts = await Post.find();
+    return res.status(200).json(posts);
+  } catch (error) {
+    next(error);
+  }
 });
 
-router.get('/', async (req, res) => {
-  // TODO: Query all posts from MongoDB.
-  // TODO: Return the results as JSON.
-  return res.status(501).json({ message: 'TODO: implement GET /api/posts' });
-});
-
-router.get('/:id', async (req, res) => {
-  // TODO: Validate req.params.id using isValidObjectId().
-  // TODO: Find one post by id.
-  // TODO: Return 404 if the post is not found.
+// READ a single post by id
+router.get('/:id', async (req, res, next) => {
   if (!isValidObjectId(req.params.id)) {
     return res.status(400).json({ error: 'Invalid post id' });
   }
 
-  return res.status(501).json({ message: 'TODO: implement GET /api/posts/:id' });
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+    return res.status(200).json(post);
+  } catch (error) {
+    next(error);
+  }
 });
 
-router.put('/:id', async (req, res) => {
-  // TODO: Validate req.params.id using isValidObjectId().
-  // TODO: Update the post with req.body.
-  // TODO: Return the updated post as JSON.
+// UPDATE a post by id
+router.put('/:id', async (req, res, next) => {
   if (!isValidObjectId(req.params.id)) {
     return res.status(400).json({ error: 'Invalid post id' });
   }
 
-  return res.status(501).json({ message: 'TODO: implement PUT /api/posts/:id' });
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+    const { title, content, author } = req.body || {};
+    post.title = title || post.title;
+    post.content = content || post.content;
+    post.author = author || post.author;
+    await post.save();
+    return res.status(200).json(post);
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ error: error.message });
+    }
+    next(error);
+  }
 });
 
-router.delete('/:id', async (req, res) => {
-  // TODO: Validate req.params.id using isValidObjectId().
-  // TODO: Delete the post by id.
-  // TODO: Return a success message as JSON.
+// DELETE a post by id
+router.delete('/:id', async (req, res, next) => {
   if (!isValidObjectId(req.params.id)) {
     return res.status(400).json({ error: 'Invalid post id' });
   }
 
-  return res.status(501).json({ message: 'TODO: implement DELETE /api/posts/:id' });
+  try {
+    const post = await Post.findByIdAndDelete(req.params.id);
+    if (!post) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+    return res.status(200).json({ message: 'Post deleted successfully' });
+  } catch (error) {
+    next(error);
+  }
 });
 
 module.exports = router;
